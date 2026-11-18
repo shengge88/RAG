@@ -1,0 +1,1451 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>知识库智能问答</title>
+  <style>
+    :root {
+      --bg: #f3efe8;
+      --bg-sidebar: #ebe6dd;
+      --surface: #fffdf9;
+      --surface-soft: #f7f3ed;
+      --ink: #1f1c18;
+      --ink-muted: #5f5952;
+      --ink-subtle: #8a837a;
+      --line: #ddd6cb;
+      --line-strong: #cfc6b8;
+      --accent: #1f4e86;
+      --accent-hover: #173c68;
+      --accent-soft: #e6eef7;
+      --accent-ring: rgba(31, 78, 134, 0.28);
+      --notice-bg: #f4efe6;
+      --notice-line: #e2d8c8;
+      --error-bg: #f6ece7;
+      --error-line: #e3c8be;
+      --shadow: 0 1px 2px rgba(31, 28, 24, 0.04), 0 10px 28px rgba(31, 28, 24, 0.06);
+      --radius: 16px;
+      --radius-sm: 10px;
+      --sidebar-width: 236px;
+      --font: "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", system-ui, -apple-system, sans-serif;
+      --space: 24px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      height: 100%;
+    }
+
+    body {
+      font-family: var(--font);
+      color: var(--ink);
+      background: var(--bg);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    button, textarea {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+      border: 0;
+      background: none;
+      color: inherit;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+    }
+
+    :focus { outline: none; }
+
+    :focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .app {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      height: 100%;
+      min-height: 100dvh;
+    }
+
+    .status-banner {
+      z-index: 30;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 36px;
+      padding: 6px 16px;
+      background: #e7e1d6;
+      color: var(--ink-muted);
+      border-bottom: 1px solid var(--line);
+      font-size: 0.75rem;
+      letter-spacing: 0.04em;
+    }
+
+    .status-banner[data-state="connecting"],
+    .status-banner[data-state="generating"] {
+      background: #e4eaf1;
+      color: var(--accent);
+    }
+
+    .status-banner[data-state="failed"],
+    .status-banner[data-state="interrupted"],
+    .status-banner[data-state="file"] {
+      background: #eee4de;
+      color: #6b453c;
+    }
+
+    .status-banner svg {
+      width: 14px;
+      height: 14px;
+      flex: 0 0 auto;
+      color: currentColor;
+    }
+
+    .shell {
+      position: relative;
+      display: grid;
+      grid-template-columns: var(--sidebar-width) 1fr;
+      min-height: 0;
+    }
+
+    .overlay {
+      display: none;
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--line);
+      padding: 22px 18px 16px;
+    }
+
+    .brand {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 22px;
+    }
+
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #fff;
+      flex: 0 0 auto;
+    }
+
+    .brand-mark svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 0.98rem;
+      font-weight: 650;
+      letter-spacing: 0.01em;
+      line-height: 1.35;
+    }
+
+    .brand p {
+      margin: 2px 0 0;
+      font-size: 0.75rem;
+      color: var(--ink-subtle);
+    }
+
+    .sidebar-note {
+      margin: 0;
+      padding: 12px 12px 13px;
+      border-radius: var(--radius-sm);
+      background: rgba(255, 253, 249, 0.62);
+      border: 1px solid var(--line);
+      color: var(--ink-muted);
+      font-size: 0.8rem;
+      line-height: 1.65;
+    }
+
+    .sidebar-spacer { flex: 1; }
+
+    .sidebar-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-top: 16px;
+    }
+
+    .ghost-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      min-height: 40px;
+      padding: 8px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--line-strong);
+      background: var(--surface);
+      color: var(--ink-muted);
+      font-size: 0.82rem;
+    }
+
+    .ghost-btn:hover:not(:disabled) {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .ghost-btn:disabled {
+      opacity: 0.55;
+    }
+
+    .ghost-btn svg {
+      width: 15px;
+      height: 15px;
+    }
+
+    .sidebar-close {
+      display: none;
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      color: var(--ink-muted);
+    }
+
+    .main {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      min-height: 0;
+      background: var(--bg);
+    }
+
+    .main-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 58px;
+      padding: 10px var(--space);
+      border-bottom: 1px solid var(--line);
+      background: rgba(243, 239, 232, 0.92);
+    }
+
+    .menu-btn {
+      display: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      color: var(--ink);
+    }
+
+    .menu-btn:hover,
+    .sidebar-close:hover {
+      background: rgba(31, 28, 24, 0.06);
+    }
+
+    .menu-btn svg,
+    .sidebar-close svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .header-title {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+
+    .header-status {
+      margin-left: auto;
+      color: var(--ink-subtle);
+      font-size: 0.75rem;
+    }
+
+    .thread {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      padding: 28px var(--space) 12px;
+    }
+
+    .thread-inner {
+      width: min(760px, 100%);
+      margin: 0 auto;
+    }
+
+    .welcome {
+      padding: 18px 4px 8px;
+    }
+
+    .welcome h2 {
+      margin: 0 0 10px;
+      font-size: clamp(1.45rem, 2.4vw, 1.85rem);
+      font-weight: 650;
+      letter-spacing: -0.02em;
+      line-height: 1.25;
+    }
+
+    .welcome p {
+      margin: 0 0 28px;
+      max-width: 40rem;
+      color: var(--ink-muted);
+      font-size: 0.95rem;
+      line-height: 1.7;
+    }
+
+    .suggest-label {
+      margin: 0 0 10px;
+      color: var(--ink-subtle);
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
+    }
+
+    .suggest-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .suggest-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      width: 100%;
+      min-height: 84px;
+      padding: 14px 14px 15px;
+      text-align: left;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      color: var(--ink);
+      font-size: 0.88rem;
+      line-height: 1.5;
+      transition: border-color 0.15s ease, transform 0.15s ease;
+    }
+
+    .suggest-card:hover:not(:disabled) {
+      border-color: #b7c9de;
+      transform: translateY(-1px);
+    }
+
+    .suggest-card:disabled {
+      opacity: 0.6;
+    }
+
+    .suggest-card svg {
+      width: 16px;
+      height: 16px;
+      margin-top: 2px;
+      flex: 0 0 auto;
+      color: var(--accent);
+    }
+
+    .feed {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      padding-bottom: 8px;
+    }
+
+    .feed[hidden],
+    .welcome[hidden],
+    .sources[hidden] {
+      display: none;
+    }
+
+    .msg-user,
+    .msg-assistant {
+      display: flex;
+    }
+
+    .msg-user {
+      justify-content: flex-end;
+    }
+
+    .msg-assistant {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 6px;
+    }
+
+    .msg-user .bubble,
+    .msg-assistant .bubble {
+      max-width: min(100%, 36rem);
+      padding: 10px 14px;
+      font-size: 0.94rem;
+      line-height: 1.65;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .msg-user .bubble {
+      border-radius: 14px 14px 4px 14px;
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .msg-assistant .bubble {
+      border-radius: 14px 14px 14px 4px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      color: var(--ink);
+    }
+
+    .msg-assistant.is-pending .bubble {
+      color: var(--ink-subtle);
+    }
+
+    .turn-meta {
+      margin: 0;
+      padding-left: 2px;
+      color: var(--ink-subtle);
+      font-size: 0.72rem;
+    }
+
+    .notice {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: var(--notice-bg);
+      border: 1px solid var(--notice-line);
+      color: var(--ink-muted);
+      font-size: 0.86rem;
+      line-height: 1.65;
+    }
+
+    .notice p {
+      margin: 0;
+    }
+
+    .notice-error {
+      background: var(--error-bg);
+      border-color: var(--error-line);
+      color: #5c3b33;
+    }
+
+    .notice svg {
+      width: 16px;
+      height: 16px;
+      margin-top: 3px;
+      flex: 0 0 auto;
+      color: var(--accent);
+    }
+
+    .notice-error svg {
+      color: #8a4b3d;
+    }
+
+    .sources {
+      margin-top: 6px;
+      padding: 16px 16px 18px;
+      border-radius: var(--radius);
+      border: 1px dashed var(--line-strong);
+      background: rgba(255, 253, 249, 0.7);
+    }
+
+    .sources h2 {
+      margin: 0 0 6px;
+      font-size: 0.8rem;
+      font-weight: 650;
+      letter-spacing: 0.04em;
+      color: var(--ink);
+    }
+
+    .sources p {
+      margin: 0;
+      color: var(--ink-subtle);
+      font-size: 0.84rem;
+      line-height: 1.65;
+    }
+
+    .composer-wrap {
+      padding: 8px var(--space) 20px;
+    }
+
+    .composer {
+      width: min(760px, 100%);
+      margin: 0 auto;
+      padding: 10px 10px 8px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .composer-label {
+      display: block;
+      padding: 2px 10px 6px;
+      color: var(--ink-subtle);
+      font-size: 0.72rem;
+      letter-spacing: 0.04em;
+    }
+
+    .composer-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+    }
+
+    #question {
+      flex: 1;
+      width: 100%;
+      min-height: 48px;
+      max-height: 160px;
+      padding: 10px 12px;
+      resize: none;
+      overflow-y: hidden;
+      border: 0;
+      background: transparent;
+      color: var(--ink);
+      line-height: 1.55;
+    }
+
+    #question::placeholder {
+      color: #9a9389;
+    }
+
+    .send-btn {
+      display: grid;
+      place-items: center;
+      width: 40px;
+      height: 40px;
+      margin-bottom: 4px;
+      border-radius: 12px;
+      background: var(--accent);
+      color: #fff;
+      flex: 0 0 auto;
+    }
+
+    .send-btn:hover:not(:disabled) {
+      background: var(--accent-hover);
+    }
+
+    .send-btn:disabled {
+      background: #cfc8bd;
+      color: #f7f3ed;
+    }
+
+    .send-btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .composer-hint {
+      margin: 2px 10px 4px;
+      color: var(--ink-subtle);
+      font-size: 0.72rem;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 880px) {
+      :root { --space: 16px; }
+
+      .shell {
+        grid-template-columns: 1fr;
+      }
+
+      .menu-btn { display: grid; place-items: center; }
+
+      .sidebar {
+        position: fixed;
+        top: 36px;
+        left: 0;
+        bottom: 0;
+        width: min(288px, 86vw);
+        z-index: 40;
+        transform: translateX(-105%);
+        transition: transform 0.2s ease;
+        box-shadow: none;
+      }
+
+      .sidebar.is-open {
+        transform: translateX(0);
+        box-shadow: 8px 0 30px rgba(31, 28, 24, 0.12);
+      }
+
+      .sidebar-close { display: grid; place-items: center; }
+
+      .overlay {
+        display: block;
+        position: fixed;
+        inset: 36px 0 0;
+        z-index: 35;
+        background: rgba(31, 28, 24, 0.32);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+      }
+
+      .overlay.is-open {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .suggest-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .header-status { display: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+
+      .suggest-card:hover:not(:disabled) {
+        transform: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="status-banner" id="status-banner" data-state="waiting" role="status" aria-live="polite">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="9"></circle>
+        <path d="M12 8v5"></path>
+        <circle cx="12" cy="16.2" r="0.8" fill="currentColor" stroke="none"></circle>
+      </svg>
+      <span id="status-text">等待提问</span>
+    </div>
+
+    <div class="shell">
+      <div class="overlay" id="sidebar-overlay" hidden></div>
+
+      <aside class="sidebar" id="sidebar" aria-label="工作台说明">
+        <button class="sidebar-close" id="sidebar-close" type="button" aria-label="关闭侧栏">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+            <path d="M6 6l12 12M18 6L6 18"></path>
+          </svg>
+        </button>
+
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 5.5A2.5 2.5 0 0 1 7.5 3H20v16.5H7.5A2.5 2.5 0 0 0 5 22V5.5z"></path>
+              <path d="M5 5.5A2.5 2.5 0 0 1 7.5 3"></path>
+              <path d="M9 8h8M9 12h8"></path>
+            </svg>
+          </div>
+          <div>
+            <h1>知识库智能问答</h1>
+            <p>问答工作台</p>
+          </div>
+        </div>
+
+        <p class="sidebar-note" id="sidebar-note">提问会发送到当前页面所在的问答服务。清空只会清除本页对话，不会删除服务端历史。</p>
+        <div class="sidebar-spacer"></div>
+        <div class="sidebar-actions">
+          <button class="ghost-btn" id="clear-btn" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 7h14"></path>
+              <path d="M10 7V5h4v2"></path>
+              <path d="M8 7l.8 12h6.4L16 7"></path>
+            </svg>
+            清空当前对话
+          </button>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="main-header">
+          <button class="menu-btn" id="menu-btn" type="button" aria-label="打开侧栏" aria-controls="sidebar" aria-expanded="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+              <path d="M5 7h14M5 12h14M5 17h14"></path>
+            </svg>
+          </button>
+          <p class="header-title">问答</p>
+          <p class="header-status" id="header-status">等待提问</p>
+        </header>
+
+        <div class="thread" id="thread">
+          <div class="thread-inner">
+            <section class="welcome" id="welcome">
+              <h2>你好，请提出一个问题</h2>
+              <p id="welcome-copy">在此提出问题，系统将基于知识库检索并给出回答。请通过后端提供的页面访问本工作台，以便连接到同一来源的问答服务。</p>
+              <p class="suggest-label">可以先试试这些问题</p>
+              <div class="suggest-grid" id="suggest-grid"></div>
+            </section>
+
+            <div class="feed" id="feed" hidden></div>
+            <section class="sources" id="sources" hidden>
+              <h2>相关知识来源</h2>
+              <p id="sources-copy">当前接口未返回来源信息。</p>
+            </section>
+          </div>
+        </div>
+
+        <div class="composer-wrap">
+          <form class="composer" id="composer" action="#" method="post">
+            <label class="composer-label" for="question">输入问题</label>
+            <div class="composer-row">
+              <textarea id="question" name="question" rows="2" placeholder="请输入你的问题…" autocomplete="off"></textarea>
+              <button class="send-btn" id="send-btn" type="submit" disabled aria-label="发送">
+                <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 12h14"></path>
+                  <path d="M13 6l6 6-6 6"></path>
+                </svg>
+              </button>
+            </div>
+            <p class="composer-hint" id="composer-hint">Ctrl 或 Command + Enter 发送，Enter 换行</p>
+          </form>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var SUGGESTIONS = [
+        "如何使用知识库问答？",
+        "回答会如何展示知识来源？",
+        "提问时有哪些需要注意的地方？"
+      ];
+      var FILE_HINT = "当前是本地文件打开方式，请通过后端提供的 HTTP 页面访问后再提问。";
+      var PENDING_TEXT = "正在生成…";
+      var DEFAULT_TIMEOUTS = { http: 25000, wsConnect: 12000, wsIdle: 30000 };
+      var customTimeouts = window.QA_TIMEOUTS || {};
+      var TIMEOUTS = {
+        http: Number(customTimeouts.http) || DEFAULT_TIMEOUTS.http,
+        wsConnect: Number(customTimeouts.wsConnect) || DEFAULT_TIMEOUTS.wsConnect,
+        wsIdle: Number(customTimeouts.wsIdle) || DEFAULT_TIMEOUTS.wsIdle
+      };
+      var ERROR_LIMIT = 180;
+      var isFileProtocol = window.location.protocol === "file:";
+
+      var sidebar = document.getElementById("sidebar");
+      var overlay = document.getElementById("sidebar-overlay");
+      var menuBtn = document.getElementById("menu-btn");
+      var closeBtn = document.getElementById("sidebar-close");
+      var clearBtn = document.getElementById("clear-btn");
+      var welcome = document.getElementById("welcome");
+      var suggestGrid = document.getElementById("suggest-grid");
+      var feed = document.getElementById("feed");
+      var sources = document.getElementById("sources");
+      var thread = document.getElementById("thread");
+      var form = document.getElementById("composer");
+      var input = document.getElementById("question");
+      var sendBtn = document.getElementById("send-btn");
+      var statusBanner = document.getElementById("status-banner");
+      var statusText = document.getElementById("status-text");
+      var headerStatus = document.getElementById("header-status");
+      var composerHint = document.getElementById("composer-hint");
+      var welcomeCopy = document.getElementById("welcome-copy");
+      var sidebarNote = document.getElementById("sidebar-note");
+      var mqDesktop = window.matchMedia ? window.matchMedia("(min-width: 881px)") : { matches: true, addEventListener: function () {}, addListener: function () {} };
+
+      var sessionId = null;
+      var busy = false;
+      var runId = 0;
+      var hasConversation = false;
+      var activeAbort = null;
+      var activeSocket = null;
+      var activeTimers = [];
+      var streamConnectTimer = null;
+      var streamIdleTimer = null;
+
+      function iconArrow() {
+        var ns = "http://www.w3.org/2000/svg";
+        var svg = document.createElementNS(ns, "svg");
+        svg.setAttribute("viewBox", "0 0 24 24");
+        svg.setAttribute("aria-hidden", "true");
+        svg.setAttribute("fill", "none");
+        svg.setAttribute("stroke", "currentColor");
+        svg.setAttribute("stroke-width", "1.7");
+        svg.setAttribute("stroke-linecap", "round");
+        svg.setAttribute("stroke-linejoin", "round");
+        var p1 = document.createElementNS(ns, "path");
+        p1.setAttribute("d", "M8 6h10v10");
+        var p2 = document.createElementNS(ns, "path");
+        p2.setAttribute("d", "M18 6L6 18");
+        svg.appendChild(p1);
+        svg.appendChild(p2);
+        return svg;
+      }
+
+      function iconInfo() {
+        var ns = "http://www.w3.org/2000/svg";
+        var svg = document.createElementNS(ns, "svg");
+        svg.setAttribute("viewBox", "0 0 24 24");
+        svg.setAttribute("aria-hidden", "true");
+        svg.setAttribute("fill", "none");
+        svg.setAttribute("stroke", "currentColor");
+        svg.setAttribute("stroke-width", "1.8");
+        svg.setAttribute("stroke-linecap", "round");
+        svg.setAttribute("stroke-linejoin", "round");
+        var c = document.createElementNS(ns, "circle");
+        c.setAttribute("cx", "12");
+        c.setAttribute("cy", "12");
+        c.setAttribute("r", "9");
+        var p = document.createElementNS(ns, "path");
+        p.setAttribute("d", "M12 11v6");
+        var dot = document.createElementNS(ns, "circle");
+        dot.setAttribute("cx", "12");
+        dot.setAttribute("cy", "7.5");
+        dot.setAttribute("r", "0.8");
+        dot.setAttribute("fill", "currentColor");
+        dot.setAttribute("stroke", "none");
+        svg.appendChild(c);
+        svg.appendChild(p);
+        svg.appendChild(dot);
+        return svg;
+      }
+
+      function looksLikeTrace(text) {
+        return /traceback|stack trace|exception in|file \".+\", line \d+/i.test(text);
+      }
+
+      function sanitizeError(raw, fallback) {
+        var text = "";
+        if (typeof raw === "string") text = raw;
+        else if (raw && typeof raw.message === "string") text = raw.message;
+        text = String(text || "").replace(/\s+/g, " ").trim();
+        if (!text || looksLikeTrace(text)) return fallback || "请求失败，请稍后重试。";
+        if (text.length > ERROR_LIMIT) text = text.slice(0, ERROR_LIMIT) + "…";
+        return text;
+      }
+
+      function classifyError(err) {
+        var msg = sanitizeError(err, "请求失败，请稍后重试。");
+        var interrupted = /中断|超时|已关闭|abort/i.test(msg);
+        return {
+          message: msg,
+          state: interrupted ? "interrupted" : "failed",
+          label: interrupted ? "回答中断" : "连接失败"
+        };
+      }
+
+      function setStatus(state, label) {
+        statusBanner.setAttribute("data-state", state);
+        statusText.textContent = label;
+        headerStatus.textContent = label;
+      }
+
+      function trackTimer(id) {
+        activeTimers.push(id);
+        return id;
+      }
+
+      function clearTimers() {
+        activeTimers.forEach(function (id) { clearTimeout(id); });
+        activeTimers = [];
+        if (streamConnectTimer) {
+          clearTimeout(streamConnectTimer);
+          streamConnectTimer = null;
+        }
+        if (streamIdleTimer) {
+          clearTimeout(streamIdleTimer);
+          streamIdleTimer = null;
+        }
+      }
+
+      function detachSocket(ws) {
+        if (!ws) return;
+        try {
+          ws.onopen = null;
+          ws.onmessage = null;
+          ws.onerror = null;
+          ws.onclose = null;
+        } catch (e) {}
+      }
+
+      function closeSocket() {
+        if (!activeSocket) return;
+        var ws = activeSocket;
+        activeSocket = null;
+        detachSocket(ws);
+        try {
+          if (ws.readyState === 0 || ws.readyState === 1) ws.close();
+        } catch (e) {}
+      }
+
+      function abortHttp() {
+        if (activeAbort) {
+          try { activeAbort.abort(); } catch (e) {}
+          activeAbort = null;
+        }
+      }
+
+      function releaseResources() {
+        clearTimers();
+        abortHttp();
+        closeSocket();
+      }
+
+      function isActive(id) {
+        return busy && id === runId;
+      }
+
+      function beginRequest() {
+        releaseResources();
+        runId += 1;
+        busy = true;
+        updateSendState();
+        return runId;
+      }
+
+      function endRequest(id) {
+        if (id !== runId) return false;
+        releaseResources();
+        busy = false;
+        updateSendState();
+        return true;
+      }
+
+      function updateSendState() {
+        var empty = input.value.trim().length === 0;
+        sendBtn.disabled = isFileProtocol || busy || empty;
+        clearBtn.disabled = busy;
+        var cards = suggestGrid.querySelectorAll("button");
+        for (var i = 0; i < cards.length; i++) cards[i].disabled = busy;
+      }
+
+      function autoGrow() {
+        input.style.height = "auto";
+        var max = 160;
+        var next = Math.min(input.scrollHeight, max);
+        input.style.height = next + "px";
+        input.style.overflowY = input.scrollHeight > max ? "auto" : "hidden";
+      }
+
+      function scrollThread() {
+        thread.scrollTop = thread.scrollHeight;
+      }
+
+      function showConversation() {
+        welcome.hidden = true;
+        feed.hidden = false;
+        sources.hidden = false;
+        hasConversation = true;
+      }
+
+      function renderSuggestions() {
+        suggestGrid.textContent = "";
+        SUGGESTIONS.forEach(function (text) {
+          var btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "suggest-card";
+          btn.appendChild(iconArrow());
+          var span = document.createElement("span");
+          span.textContent = text;
+          btn.appendChild(span);
+          btn.addEventListener("click", function () {
+            if (busy) return;
+            input.value = text;
+            updateSendState();
+            autoGrow();
+            input.focus();
+          });
+          suggestGrid.appendChild(btn);
+        });
+      }
+
+      function appendUserMessage(text) {
+        var wrap = document.createElement("div");
+        wrap.className = "msg-user";
+        var bubble = document.createElement("div");
+        bubble.className = "bubble";
+        bubble.textContent = text;
+        wrap.appendChild(bubble);
+        feed.appendChild(wrap);
+        return wrap;
+      }
+
+      function appendAssistant() {
+        var wrap = document.createElement("div");
+        wrap.className = "msg-assistant is-pending";
+        var bubble = document.createElement("div");
+        bubble.className = "bubble";
+        bubble.textContent = PENDING_TEXT;
+        var meta = document.createElement("p");
+        meta.className = "turn-meta";
+        meta.hidden = true;
+        wrap.appendChild(bubble);
+        wrap.appendChild(meta);
+        feed.appendChild(wrap);
+        return { wrap: wrap, bubble: bubble, meta: meta, started: false };
+      }
+
+      function writeAssistant(entry, token, replace) {
+        if (!entry.started || replace) {
+          entry.started = true;
+          entry.wrap.classList.remove("is-pending");
+          entry.bubble.textContent = token;
+        } else {
+          entry.bubble.textContent += token;
+        }
+        scrollThread();
+      }
+
+      function setAssistantMeta(entry, processingTime) {
+        if (typeof processingTime !== "number" || !isFinite(processingTime) || processingTime < 0) return;
+        entry.meta.hidden = false;
+        entry.meta.textContent = "用时 " + (Math.round(processingTime * 10) / 10) + " 秒";
+      }
+
+      function removePendingIfEmpty(entry) {
+        if (entry && !entry.started && entry.wrap && entry.wrap.parentNode) {
+          entry.wrap.parentNode.removeChild(entry.wrap);
+        }
+      }
+
+      function appendErrorNotice(text) {
+        var notice = document.createElement("div");
+        notice.className = "notice notice-error";
+        notice.setAttribute("role", "alert");
+        notice.appendChild(iconInfo());
+        var p = document.createElement("p");
+        p.textContent = text;
+        notice.appendChild(p);
+        feed.appendChild(notice);
+        scrollThread();
+      }
+
+      function parseJsonSafe(text) {
+        try {
+          return { ok: true, value: JSON.parse(text) };
+        } catch (e) {
+          return { ok: false };
+        }
+      }
+
+      function extractHttpHint(status, text) {
+        if (!text) return "服务返回错误（HTTP " + status + "）。";
+        var parsed = parseJsonSafe(text);
+        var hint = "";
+        if (parsed.ok && parsed.value && typeof parsed.value === "object") {
+          var value = parsed.value;
+          if (typeof value.detail === "string") hint = value.detail;
+          else if (typeof value.error === "string") hint = value.error;
+          else if (typeof value.message === "string") hint = value.message;
+        } else {
+          hint = text;
+        }
+        if (looksLikeTrace(hint)) {
+          return "服务返回错误（HTTP " + status + "）。";
+        }
+        hint = sanitizeError(hint, "");
+        return hint ? "服务返回错误（HTTP " + status + "）：" + hint : "服务返回错误（HTTP " + status + "）。";
+      }
+
+      function requestJson(path, body, id) {
+        return new Promise(function (resolve, reject) {
+          var controller = new AbortController();
+          activeAbort = controller;
+          var settled = false;
+
+          function finish(err, data) {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            if (activeAbort === controller) activeAbort = null;
+            if (err) reject(err);
+            else resolve(data);
+          }
+
+          function staleError() {
+            var err = new Error("stale");
+            err.code = "stale";
+            return err;
+          }
+
+          var timer = trackTimer(setTimeout(function () {
+            try { controller.abort(); } catch (e) {}
+            if (isActive(id)) finish(new Error("连接超时，请稍后重试。"));
+            else finish(staleError());
+          }, TIMEOUTS.http));
+
+          var opts = {
+            method: "POST",
+            signal: controller.signal
+          };
+          if (body !== null) {
+            opts.headers = { "Content-Type": "application/json" };
+            opts.body = JSON.stringify(body);
+          }
+
+          fetch(path, opts).then(function (res) {
+            return res.text().then(function (text) {
+              return { res: res, text: text };
+            });
+          }).then(function (payload) {
+            if (settled) return;
+            if (!isActive(id)) {
+              finish(staleError());
+              return;
+            }
+            if (!payload.res.ok) {
+              finish(new Error(extractHttpHint(payload.res.status, payload.text)));
+              return;
+            }
+            var parsed = parseJsonSafe(payload.text);
+            if (!parsed.ok || !parsed.value || typeof parsed.value !== "object") {
+              finish(new Error("服务返回了无法解析的数据。"));
+              return;
+            }
+            finish(null, parsed.value);
+          }).catch(function (err) {
+            if (settled) return;
+            if (!isActive(id)) {
+              finish(staleError());
+              return;
+            }
+            if (err && (err.name === "AbortError" || err.message === "The operation was aborted.")) {
+              finish(new Error("请求已中断。"));
+              return;
+            }
+            if (err && err.message) finish(err);
+            else finish(new Error("网络请求失败，请稍后重试。"));
+          });
+        });
+      }
+
+      function ensureSession(id) {
+        if (sessionId) return Promise.resolve(sessionId);
+        return requestJson("/api/create_session", null, id).then(function (data) {
+          if (!isActive(id)) return null;
+          if (!data || typeof data.session_id !== "string" || !data.session_id.trim()) {
+            throw new Error("无法创建会话：服务返回数据不完整。");
+          }
+          sessionId = data.session_id;
+          return sessionId;
+        });
+      }
+
+      function streamUrl() {
+        var protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        return protocol + "//" + window.location.host + "/api/stream";
+      }
+
+      function streamAnswer(payload, entry, id) {
+        return new Promise(function (resolve, reject) {
+          var settled = false;
+          var gotEnd = false;
+          var endComplete = true;
+          var endTime = null;
+          var ws;
+
+          function settle(err) {
+            if (settled) return;
+            settled = true;
+            if (streamConnectTimer) {
+              clearTimeout(streamConnectTimer);
+              streamConnectTimer = null;
+            }
+            if (streamIdleTimer) {
+              clearTimeout(streamIdleTimer);
+              streamIdleTimer = null;
+            }
+            if (activeSocket === ws) activeSocket = null;
+            detachSocket(ws);
+            if (err) reject(err);
+            else resolve({ isComplete: endComplete, processingTime: endTime });
+          }
+
+          function fail(message) {
+            settle(new Error(message));
+            try {
+              if (ws && (ws.readyState === 0 || ws.readyState === 1)) ws.close();
+            } catch (e) {}
+          }
+
+          try {
+            ws = new WebSocket(streamUrl());
+          } catch (e) {
+            reject(new Error("无法建立流式连接。"));
+            return;
+          }
+          activeSocket = ws;
+
+          streamConnectTimer = setTimeout(function () {
+            fail("连接超时，请稍后重试。");
+          }, TIMEOUTS.wsConnect);
+
+          function resetIdle() {
+            if (streamIdleTimer) clearTimeout(streamIdleTimer);
+            streamIdleTimer = setTimeout(function () {
+              fail("回答中断：等待服务响应超时。");
+            }, TIMEOUTS.wsIdle);
+          }
+
+          ws.onopen = function () {
+            if (streamConnectTimer) {
+              clearTimeout(streamConnectTimer);
+              streamConnectTimer = null;
+            }
+            if (!isActive(id)) {
+              try { ws.close(); } catch (e) {}
+              settle(new Error("stale"));
+              return;
+            }
+            setStatus("generating", "正在生成");
+            try {
+              ws.send(JSON.stringify(payload));
+            } catch (e) {
+              fail("无法向服务发送问题。");
+              return;
+            }
+            resetIdle();
+          };
+
+          ws.onmessage = function (event) {
+            if (!isActive(id) || settled) return;
+            resetIdle();
+            var parsed = parseJsonSafe(typeof event.data === "string" ? event.data : "");
+            if (!parsed.ok || !parsed.value || typeof parsed.value !== "object") {
+              return;
+            }
+            var data = parsed.value;
+            var type = data.type;
+            if (type === "start") {
+              if (typeof data.session_id === "string" && data.session_id.trim()) {
+                sessionId = data.session_id;
+              }
+              return;
+            }
+            if (type === "token") {
+              if (typeof data.token === "string") writeAssistant(entry, data.token, false);
+              return;
+            }
+            if (type === "end") {
+              if (typeof data.session_id === "string" && data.session_id.trim()) {
+                sessionId = data.session_id;
+              }
+              if (typeof data.is_complete === "boolean") endComplete = data.is_complete;
+              if (typeof data.processing_time === "number") endTime = data.processing_time;
+              gotEnd = true;
+              try { ws.close(); } catch (e) {}
+              settle(null);
+              return;
+            }
+            if (type === "error") {
+              fail(sanitizeError(data.error, "回答失败，请稍后重试。"));
+              return;
+            }
+            // 未知消息类型：忽略，继续等待 start/token/end/error。
+          };
+
+          ws.onerror = function () {
+            // 具体结果以 close 或已收到的 end/error 为准，避免重复提示。
+          };
+
+          ws.onclose = function () {
+            if (settled) return;
+            if (gotEnd) {
+              settle(null);
+              return;
+            }
+            settle(new Error("回答中断：连接已关闭。"));
+          };
+        });
+      }
+
+      function finishSuccess(id, entry, info) {
+        if (!endRequest(id)) return;
+        if (info) setAssistantMeta(entry, info.processingTime);
+        if (info && info.isComplete === false) {
+          appendErrorNotice("服务表示该回答尚未完成。");
+          setStatus("interrupted", "回答中断");
+        } else {
+          setStatus("complete", "回答完成");
+        }
+        input.value = "";
+        updateSendState();
+        autoGrow();
+        input.focus();
+      }
+
+      function finishError(id, err, entry) {
+        if (err && err.code === "stale") return;
+        if (!isActive(id)) return;
+        var classified = classifyError(err);
+        removePendingIfEmpty(entry);
+        appendErrorNotice(classified.message);
+        endRequest(id);
+        setStatus(classified.state, classified.label);
+      }
+
+      function submitQuestion() {
+        if (isFileProtocol) {
+          setStatus("file", "请通过后端页面访问");
+          return;
+        }
+        var text = input.value.trim();
+        if (!text || busy) return;
+
+        var id = beginRequest();
+        showConversation();
+        appendUserMessage(text);
+        var entry = appendAssistant();
+        setStatus("connecting", "正在连接");
+        scrollThread();
+
+        ensureSession(id).then(function (sid) {
+          if (!isActive(id)) return null;
+          var payload = {
+            query: text,
+            session_id: sid,
+            source_filter: null
+          };
+          setStatus("generating", "正在生成");
+          return requestJson("/api/query", payload, id).then(function (data) {
+            if (!isActive(id)) return null;
+            if (data && typeof data.session_id === "string" && data.session_id.trim()) {
+              sessionId = data.session_id;
+            }
+            if (data.is_streaming === true) {
+              return streamAnswer({
+                query: text,
+                session_id: sessionId,
+                source_filter: null
+              }, entry, id).then(function (info) {
+                if (!isActive(id)) return;
+                finishSuccess(id, entry, info);
+              });
+            }
+            if (data.is_streaming === false) {
+              if (typeof data.answer !== "string") {
+                throw new Error("服务返回数据不完整。");
+              }
+              writeAssistant(entry, data.answer, true);
+              finishSuccess(id, entry, { isComplete: true, processingTime: data.processing_time });
+              return;
+            }
+            throw new Error("服务返回数据不完整。");
+          });
+        }).catch(function (err) {
+          finishError(id, err, entry);
+        });
+      }
+
+      function clearConversation() {
+        if (busy) return;
+        var hasInput = input.value.trim().length > 0;
+        if (!hasConversation && !hasInput && !sessionId) return;
+        var ok = window.confirm("确定清空当前对话吗？此操作只会清除本页显示，不会删除服务端历史。");
+        if (!ok) return;
+        releaseResources();
+        runId += 1;
+        busy = false;
+        sessionId = null;
+        hasConversation = false;
+        feed.textContent = "";
+        feed.hidden = true;
+        sources.hidden = true;
+        welcome.hidden = false;
+        input.value = "";
+        if (isFileProtocol) setStatus("file", "请通过后端页面访问");
+        else setStatus("waiting", "等待提问");
+        updateSendState();
+        autoGrow();
+        thread.scrollTop = 0;
+        input.focus();
+      }
+
+      function openSidebar() {
+        if (mqDesktop.matches) return;
+        sidebar.classList.add("is-open");
+        overlay.classList.add("is-open");
+        overlay.hidden = false;
+        menuBtn.setAttribute("aria-expanded", "true");
+        closeBtn.focus();
+      }
+
+      function closeSidebar() {
+        sidebar.classList.remove("is-open");
+        overlay.classList.remove("is-open");
+        overlay.hidden = true;
+        menuBtn.setAttribute("aria-expanded", "false");
+      }
+
+      function onDesktopChange() {
+        if (mqDesktop.matches) closeSidebar();
+      }
+
+      form.addEventListener("submit", function (event) {
+        event.preventDefault();
+        submitQuestion();
+      });
+
+      input.addEventListener("input", function () {
+        updateSendState();
+        autoGrow();
+      });
+
+      input.addEventListener("keydown", function (event) {
+        if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+          event.preventDefault();
+          submitQuestion();
+        }
+      });
+
+      clearBtn.addEventListener("click", clearConversation);
+      menuBtn.addEventListener("click", openSidebar);
+      closeBtn.addEventListener("click", function () {
+        closeSidebar();
+        menuBtn.focus();
+      });
+      overlay.addEventListener("click", closeSidebar);
+
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape" && sidebar.classList.contains("is-open")) {
+          closeSidebar();
+          menuBtn.focus();
+        }
+      });
+
+      if (mqDesktop.addEventListener) mqDesktop.addEventListener("change", onDesktopChange);
+      else if (mqDesktop.addListener) mqDesktop.addListener(onDesktopChange);
+
+      renderSuggestions();
+
+      if (isFileProtocol) {
+        setStatus("file", "请通过后端页面访问");
+        welcomeCopy.textContent = FILE_HINT;
+        sidebarNote.textContent = FILE_HINT;
+        composerHint.textContent = "请通过后端提供的 HTTP 页面访问后再发送问题。";
+      } else {
+        setStatus("waiting", "等待提问");
+      }
+
+      updateSendState();
+      autoGrow();
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>知识库智能问答</title>
+  <style>
+    :root {
+      --bg: #f3efe8;
+      --bg-sidebar: #ebe6dd;
+      --surface: #fffdf9;
+      --surface-soft: #f7f3ed;
+      --ink: #1f1c18;
+      --ink-muted: #5f5952;
+      --ink-subtle: #8a837a;
+      --line: #ddd6cb;
+      --line-strong: #cfc6b8;
+      --accent: #1f4e86;
+      --accent-hover: #173c68;
+      --accent-soft: #e6eef7;
+      --accent-ring: rgba(31, 78, 134, 0.28);
+      --notice-bg: #f4efe6;
+      --notice-line: #e2d8c8;
+      --shadow: 0 1px 2px rgba(31, 28, 24, 0.04), 0 10px 28px rgba(31, 28, 24, 0.06);
+      --radius: 16px;
+      --radius-sm: 10px;
+      --sidebar-width: 236px;
+      --font: "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", system-ui, -apple-system, sans-serif;
+      --space: 24px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      height: 100%;
+    }
+
+    body {
+      font-family: var(--font);
+      color: var(--ink);
+      background: var(--bg);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    button, textarea {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+      border: 0;
+      background: none;
+      color: inherit;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+    }
+
+    :focus { outline: none; }
+
+    :focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .app {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      height: 100%;
+      min-height: 100dvh;
+    }
+
+    .preview-banner {
+      z-index: 30;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 36px;
+      padding: 6px 16px;
+      background: #e7e1d6;
+      color: var(--ink-muted);
+      border-bottom: 1px solid var(--line);
+      font-size: 0.75rem;
+      letter-spacing: 0.04em;
+    }
+
+    .preview-banner svg {
+      width: 14px;
+      height: 14px;
+      flex: 0 0 auto;
+      color: var(--accent);
+    }
+
+    .shell {
+      position: relative;
+      display: grid;
+      grid-template-columns: var(--sidebar-width) 1fr;
+      min-height: 0;
+    }
+
+    .overlay {
+      display: none;
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--line);
+      padding: 22px 18px 16px;
+    }
+
+    .brand {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 22px;
+    }
+
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #fff;
+      flex: 0 0 auto;
+    }
+
+    .brand-mark svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 0.98rem;
+      font-weight: 650;
+      letter-spacing: 0.01em;
+      line-height: 1.35;
+    }
+
+    .brand p {
+      margin: 2px 0 0;
+      font-size: 0.75rem;
+      color: var(--ink-subtle);
+    }
+
+    .sidebar-note {
+      margin: 0;
+      padding: 12px 12px 13px;
+      border-radius: var(--radius-sm);
+      background: rgba(255, 253, 249, 0.62);
+      border: 1px solid var(--line);
+      color: var(--ink-muted);
+      font-size: 0.8rem;
+      line-height: 1.65;
+    }
+
+    .sidebar-spacer { flex: 1; }
+
+    .sidebar-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-top: 16px;
+    }
+
+    .ghost-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      min-height: 40px;
+      padding: 8px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--line-strong);
+      background: var(--surface);
+      color: var(--ink-muted);
+      font-size: 0.82rem;
+    }
+
+    .ghost-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .ghost-btn svg {
+      width: 15px;
+      height: 15px;
+    }
+
+    .sidebar-close {
+      display: none;
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      color: var(--ink-muted);
+    }
+
+    .main {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      min-height: 0;
+      background: var(--bg);
+    }
+
+    .main-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 58px;
+      padding: 10px var(--space);
+      border-bottom: 1px solid var(--line);
+      background: rgba(243, 239, 232, 0.92);
+    }
+
+    .menu-btn {
+      display: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      color: var(--ink);
+    }
+
+    .menu-btn:hover,
+    .sidebar-close:hover {
+      background: rgba(31, 28, 24, 0.06);
+    }
+
+    .menu-btn svg,
+    .sidebar-close svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .header-title {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+
+    .header-status {
+      margin-left: auto;
+      color: var(--ink-subtle);
+      font-size: 0.75rem;
+    }
+
+    .thread {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      padding: 28px var(--space) 12px;
+    }
+
+    .thread-inner {
+      width: min(760px, 100%);
+      margin: 0 auto;
+    }
+
+    .welcome {
+      padding: 18px 4px 8px;
+    }
+
+    .welcome h2 {
+      margin: 0 0 10px;
+      font-size: clamp(1.45rem, 2.4vw, 1.85rem);
+      font-weight: 650;
+      letter-spacing: -0.02em;
+      line-height: 1.25;
+    }
+
+    .welcome p {
+      margin: 0 0 28px;
+      max-width: 40rem;
+      color: var(--ink-muted);
+      font-size: 0.95rem;
+      line-height: 1.7;
+    }
+
+    .suggest-label {
+      margin: 0 0 10px;
+      color: var(--ink-subtle);
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
+    }
+
+    .suggest-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .suggest-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      width: 100%;
+      min-height: 84px;
+      padding: 14px 14px 15px;
+      text-align: left;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      color: var(--ink);
+      font-size: 0.88rem;
+      line-height: 1.5;
+      transition: border-color 0.15s ease, transform 0.15s ease;
+    }
+
+    .suggest-card:hover {
+      border-color: #b7c9de;
+      transform: translateY(-1px);
+    }
+
+    .suggest-card svg {
+      width: 16px;
+      height: 16px;
+      margin-top: 2px;
+      flex: 0 0 auto;
+      color: var(--accent);
+    }
+
+    .feed {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      padding-bottom: 8px;
+    }
+
+    .feed[hidden],
+    .welcome[hidden],
+    .sources[hidden] {
+      display: none;
+    }
+
+    .msg-user {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .msg-user .bubble {
+      max-width: min(100%, 36rem);
+      padding: 10px 14px;
+      border-radius: 14px 14px 4px 14px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.94rem;
+      line-height: 1.65;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .notice {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: var(--notice-bg);
+      border: 1px solid var(--notice-line);
+      color: var(--ink-muted);
+      font-size: 0.86rem;
+      line-height: 1.65;
+    }
+
+    .notice svg {
+      width: 16px;
+      height: 16px;
+      margin-top: 3px;
+      flex: 0 0 auto;
+      color: var(--accent);
+    }
+
+    .sources {
+      margin-top: 6px;
+      padding: 16px 16px 18px;
+      border-radius: var(--radius);
+      border: 1px dashed var(--line-strong);
+      background: rgba(255, 253, 249, 0.7);
+    }
+
+    .sources h2 {
+      margin: 0 0 6px;
+      font-size: 0.8rem;
+      font-weight: 650;
+      letter-spacing: 0.04em;
+      color: var(--ink);
+    }
+
+    .sources p {
+      margin: 0;
+      color: var(--ink-subtle);
+      font-size: 0.84rem;
+      line-height: 1.65;
+    }
+
+    .composer-wrap {
+      padding: 8px var(--space) 20px;
+    }
+
+    .composer {
+      width: min(760px, 100%);
+      margin: 0 auto;
+      padding: 10px 10px 8px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .composer-label {
+      display: block;
+      padding: 2px 10px 6px;
+      color: var(--ink-subtle);
+      font-size: 0.72rem;
+      letter-spacing: 0.04em;
+    }
+
+    .composer-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+    }
+
+    #question {
+      flex: 1;
+      width: 100%;
+      min-height: 48px;
+      max-height: 160px;
+      padding: 10px 12px;
+      resize: none;
+      overflow-y: hidden;
+      border: 0;
+      background: transparent;
+      color: var(--ink);
+      line-height: 1.55;
+    }
+
+    #question::placeholder {
+      color: #9a9389;
+    }
+
+    .send-btn {
+      display: grid;
+      place-items: center;
+      width: 40px;
+      height: 40px;
+      margin-bottom: 4px;
+      border-radius: 12px;
+      background: var(--accent);
+      color: #fff;
+      flex: 0 0 auto;
+    }
+
+    .send-btn:hover:not(:disabled) {
+      background: var(--accent-hover);
+    }
+
+    .send-btn:disabled {
+      background: #cfc8bd;
+      color: #f7f3ed;
+    }
+
+    .send-btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .composer-hint {
+      margin: 2px 10px 4px;
+      color: var(--ink-subtle);
+      font-size: 0.72rem;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 880px) {
+      :root { --space: 16px; }
+
+      .shell {
+        grid-template-columns: 1fr;
+      }
+
+      .menu-btn { display: grid; place-items: center; }
+
+      .sidebar {
+        position: fixed;
+        top: 36px;
+        left: 0;
+        bottom: 0;
+        width: min(288px, 86vw);
+        z-index: 40;
+        transform: translateX(-105%);
+        transition: transform 0.2s ease;
+        box-shadow: none;
+      }
+
+      .sidebar.is-open {
+        transform: translateX(0);
+        box-shadow: 8px 0 30px rgba(31, 28, 24, 0.12);
+      }
+
+      .sidebar-close { display: grid; place-items: center; }
+
+      .overlay {
+        display: block;
+        position: fixed;
+        inset: 36px 0 0;
+        z-index: 35;
+        background: rgba(31, 28, 24, 0.32);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+      }
+
+      .overlay.is-open {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .suggest-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .header-status { display: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+
+      .suggest-card:hover {
+        transform: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="preview-banner" role="status">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="9"></circle>
+        <path d="M12 8v5"></path>
+        <circle cx="12" cy="16.2" r="0.8" fill="currentColor" stroke="none"></circle>
+      </svg>
+      <span>界面预览 · 尚未接入问答服务</span>
+    </div>
+
+    <div class="shell">
+      <div class="overlay" id="sidebar-overlay" hidden></div>
+
+      <aside class="sidebar" id="sidebar" aria-label="工作台说明">
+        <button class="sidebar-close" id="sidebar-close" type="button" aria-label="关闭侧栏">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+            <path d="M6 6l12 12M18 6L6 18"></path>
+          </svg>
+        </button>
+
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 5.5A2.5 2.5 0 0 1 7.5 3H20v16.5H7.5A2.5 2.5 0 0 0 5 22V5.5z"></path>
+              <path d="M5 5.5A2.5 2.5 0 0 1 7.5 3"></path>
+              <path d="M9 8h8M9 12h8"></path>
+            </svg>
+          </div>
+          <div>
+            <h1>知识库智能问答</h1>
+            <p>工作台界面预览</p>
+          </div>
+        </div>
+
+        <p class="sidebar-note">当前仅展示界面布局与基本交互，不会检索知识库，也不会生成回答。</p>
+        <div class="sidebar-spacer"></div>
+        <div class="sidebar-actions">
+          <button class="ghost-btn" id="clear-btn" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 7h14"></path>
+              <path d="M10 7V5h4v2"></path>
+              <path d="M8 7l.8 12h6.4L16 7"></path>
+            </svg>
+            清空当前预览
+          </button>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="main-header">
+          <button class="menu-btn" id="menu-btn" type="button" aria-label="打开侧栏" aria-controls="sidebar" aria-expanded="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+              <path d="M5 7h14M5 12h14M5 17h14"></path>
+            </svg>
+          </button>
+          <p class="header-title">问答</p>
+          <p class="header-status">界面预览 · 尚未接入问答服务</p>
+        </header>
+
+        <div class="thread" id="thread">
+          <div class="thread-inner">
+            <section class="welcome" id="welcome">
+              <h2>你好，请提出一个问题</h2>
+              <p>这里将用于基于知识库检索的问答。你现在看到的是界面预览：可以试用输入与布局，但尚未连接问答服务，提交内容不会被检索或回答。</p>
+              <p class="suggest-label">可以先试试这些问题</p>
+              <div class="suggest-grid" id="suggest-grid"></div>
+            </section>
+
+            <div class="feed" id="feed" hidden></div>
+            <section class="sources" id="sources" hidden>
+              <h2>相关知识来源</h2>
+              <p>暂无知识来源。接入问答服务后，与回答相关的文档将显示在这里。</p>
+            </section>
+          </div>
+        </div>
+
+        <div class="composer-wrap">
+          <form class="composer" id="composer" action="#" method="post">
+            <label class="composer-label" for="question">输入问题</label>
+            <div class="composer-row">
+              <textarea id="question" name="question" rows="2" placeholder="请输入你的问题…" autocomplete="off"></textarea>
+              <button class="send-btn" id="send-btn" type="submit" disabled aria-label="发送">
+                <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 12h14"></path>
+                  <path d="M13 6l6 6-6 6"></path>
+                </svg>
+              </button>
+            </div>
+            <p class="composer-hint">Ctrl 或 Command + Enter 发送，Enter 换行</p>
+          </form>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var SUGGESTIONS = [
+        "如何使用知识库问答？",
+        "回答会如何展示知识来源？",
+        "提问时有哪些需要注意的地方？"
+      ];
+
+      var sidebar = document.getElementById("sidebar");
+      var overlay = document.getElementById("sidebar-overlay");
+      var menuBtn = document.getElementById("menu-btn");
+      var closeBtn = document.getElementById("sidebar-close");
+      var clearBtn = document.getElementById("clear-btn");
+      var welcome = document.getElementById("welcome");
+      var suggestGrid = document.getElementById("suggest-grid");
+      var feed = document.getElementById("feed");
+      var sources = document.getElementById("sources");
+      var thread = document.getElementById("thread");
+      var form = document.getElementById("composer");
+      var input = document.getElementById("question");
+      var sendBtn = document.getElementById("send-btn");
+      var mqDesktop = window.matchMedia("(min-width: 881px)");
+      var hasPreviewContent = false;
+
+      function iconArrow() {
+        var ns = "http://www.w3.org/2000/svg";
+        var svg = document.createElementNS(ns, "svg");
+        svg.setAttribute("viewBox", "0 0 24 24");
+        svg.setAttribute("aria-hidden", "true");
+        svg.setAttribute("fill", "none");
+        svg.setAttribute("stroke", "currentColor");
+        svg.setAttribute("stroke-width", "1.7");
+        svg.setAttribute("stroke-linecap", "round");
+        svg.setAttribute("stroke-linejoin", "round");
+        var p1 = document.createElementNS(ns, "path");
+        p1.setAttribute("d", "M8 6h10v10");
+        var p2 = document.createElementNS(ns, "path");
+        p2.setAttribute("d", "M18 6L6 18");
+        svg.appendChild(p1);
+        svg.appendChild(p2);
+        return svg;
+      }
+
+      function iconInfo() {
+        var ns = "http://www.w3.org/2000/svg";
+        var svg = document.createElementNS(ns, "svg");
+        svg.setAttribute("viewBox", "0 0 24 24");
+        svg.setAttribute("aria-hidden", "true");
+        svg.setAttribute("fill", "none");
+        svg.setAttribute("stroke", "currentColor");
+        svg.setAttribute("stroke-width", "1.8");
+        svg.setAttribute("stroke-linecap", "round");
+        svg.setAttribute("stroke-linejoin", "round");
+        var c = document.createElementNS(ns, "circle");
+        c.setAttribute("cx", "12");
+        c.setAttribute("cy", "12");
+        c.setAttribute("r", "9");
+        var p = document.createElementNS(ns, "path");
+        p.setAttribute("d", "M12 11v6");
+        var dot = document.createElementNS(ns, "circle");
+        dot.setAttribute("cx", "12");
+        dot.setAttribute("cy", "7.5");
+        dot.setAttribute("r", "0.8");
+        dot.setAttribute("fill", "currentColor");
+        dot.setAttribute("stroke", "none");
+        svg.appendChild(c);
+        svg.appendChild(p);
+        svg.appendChild(dot);
+        return svg;
+      }
+
+      function renderSuggestions() {
+        suggestGrid.textContent = "";
+        SUGGESTIONS.forEach(function (text) {
+          var btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "suggest-card";
+          btn.appendChild(iconArrow());
+          var span = document.createElement("span");
+          span.textContent = text;
+          btn.appendChild(span);
+          btn.addEventListener("click", function () {
+            input.value = text;
+            updateSendState();
+            autoGrow();
+            input.focus();
+          });
+          suggestGrid.appendChild(btn);
+        });
+      }
+
+      function updateSendState() {
+        sendBtn.disabled = input.value.trim().length === 0;
+      }
+
+      function autoGrow() {
+        input.style.height = "auto";
+        var max = 160;
+        var next = Math.min(input.scrollHeight, max);
+        input.style.height = next + "px";
+        input.style.overflowY = input.scrollHeight > max ? "auto" : "hidden";
+      }
+
+      function scrollThread() {
+        thread.scrollTop = thread.scrollHeight;
+      }
+
+      function showConversation() {
+        welcome.hidden = true;
+        feed.hidden = false;
+        sources.hidden = false;
+        hasPreviewContent = true;
+      }
+
+      function appendUserMessage(text) {
+        var wrap = document.createElement("div");
+        wrap.className = "msg-user";
+        var bubble = document.createElement("div");
+        bubble.className = "bubble";
+        bubble.textContent = text;
+        wrap.appendChild(bubble);
+        feed.appendChild(wrap);
+      }
+
+      function appendPreviewNotice() {
+        var notice = document.createElement("div");
+        notice.className = "notice";
+        notice.setAttribute("role", "status");
+        notice.appendChild(iconInfo());
+        var p = document.createElement("p");
+        p.style.margin = "0";
+        p.textContent = "此为界面预览，尚未连接问答服务。刚才提交的内容仅用于展示输入效果，不会被检索或回答。";
+        notice.appendChild(p);
+        feed.appendChild(notice);
+      }
+
+      function submitQuestion() {
+        var text = input.value.trim();
+        if (!text) return;
+        showConversation();
+        appendUserMessage(text);
+        appendPreviewNotice();
+        input.value = "";
+        updateSendState();
+        autoGrow();
+        scrollThread();
+      }
+
+      function clearPreview() {
+        if (!hasPreviewContent && input.value.trim().length === 0) return;
+        var ok = window.confirm("确定清空当前预览中的消息和输入吗？");
+        if (!ok) return;
+        feed.textContent = "";
+        feed.hidden = true;
+        sources.hidden = true;
+        welcome.hidden = false;
+        input.value = "";
+        hasPreviewContent = false;
+        updateSendState();
+        autoGrow();
+        thread.scrollTop = 0;
+        input.focus();
+      }
+
+      function openSidebar() {
+        if (mqDesktop.matches) return;
+        sidebar.classList.add("is-open");
+        overlay.classList.add("is-open");
+        overlay.hidden = false;
+        menuBtn.setAttribute("aria-expanded", "true");
+        closeBtn.focus();
+      }
+
+      function closeSidebar() {
+        sidebar.classList.remove("is-open");
+        overlay.classList.remove("is-open");
+        overlay.hidden = true;
+        menuBtn.setAttribute("aria-expanded", "false");
+      }
+
+      function onDesktopChange() {
+        if (mqDesktop.matches) {
+          closeSidebar();
+        }
+      }
+
+      form.addEventListener("submit", function (event) {
+        event.preventDefault();
+        submitQuestion();
+      });
+
+      input.addEventListener("input", function () {
+        updateSendState();
+        autoGrow();
+      });
+
+      input.addEventListener("keydown", function (event) {
+        if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+          event.preventDefault();
+          submitQuestion();
+        }
+      });
+
+      clearBtn.addEventListener("click", clearPreview);
+      menuBtn.addEventListener("click", openSidebar);
+      closeBtn.addEventListener("click", function () {
+        closeSidebar();
+        menuBtn.focus();
+      });
+      overlay.addEventListener("click", closeSidebar);
+
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape" && sidebar.classList.contains("is-open")) {
+          closeSidebar();
+          menuBtn.focus();
+        }
+      });
+
+      if (mqDesktop.addEventListener) {
+        mqDesktop.addEventListener("change", onDesktopChange);
+      } else if (mqDesktop.addListener) {
+        mqDesktop.addListener(onDesktopChange);
+      }
+
+      renderSuggestions();
+      updateSendState();
+      autoGrow();
+    })();
+  </script>
+</body>
+</html>

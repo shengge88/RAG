@@ -1,0 +1,22 @@
+LLMproject 安全上传快照说明
+================================
+源路径: C:\Users\Lenovo\PycharmProjects\LLMproject
+本快照为过滤副本，未修改原项目文件，也未改动原目录。
+
+建议上传目标: https://github.com/shengge88/RAG  默认分支 main（公开仓库）
+远端目前仅有 README.md。建议将本快照中的 integrated_qa_system/ 放到仓库根目录，保留远端现有 README.md，避免覆盖。
+
+包含: 项目源码、小体量问答/评估数据、页面静态文件；
+以及 fine-tune 分类器目录中的小型配置/分词文件（不含权重）。
+rag_assesment/.env 中的旧 API key 已从上传副本删除，不进入仓库。
+仓库只提交空模板 rag_assesment/.env.example（仅变量名，无真实凭据），并忽略 .env。
+
+已排除（原项目中仍保留，仅不进入本快照）:
+- config.ini：含可能仍有效的 MySQL/Redis 密码，以及客服电话（个人号码）。未做脱敏，故整文件不纳入，也不在仓库中重建。
+- .idea/：IDE 本地配置与数据源信息
+- __pycache__/、*.log、logs/
+- rag_qa/models/：本地大模型权重（bge-m3、bge-reranker-large、bert-base-chinese 等）
+- rag_qa/core/bert_results/：训练 checkpoint
+- rag_qa/core/bert_query_classifier/model.safetensors：微调分类器权重
+
+注意: 仓库为公开仓库。本快照未包含 requirements.txt（源项目中没有该文件）。

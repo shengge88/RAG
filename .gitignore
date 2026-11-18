@@ -1,0 +1,18 @@
+# 防止将来误传缓存、本地凭据配置、模型权重和日志。
+# 忽略 .env，避免将来误传本地密钥。空模板是 .env.example，不含真实凭据。
+.env
+__pycache__/
+*.py[cod]
+.idea/
+config.ini
+logs/
+*.log
+integrated_qa_system/rag_qa/models/
+integrated_qa_system/rag_qa/core/bert_results/
+*.safetensors
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.gguf
+*.bin
